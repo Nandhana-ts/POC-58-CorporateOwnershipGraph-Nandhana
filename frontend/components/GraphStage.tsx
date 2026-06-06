@@ -49,7 +49,6 @@ export default function GraphStage({ graphData }: Props) {
     .attr("fill", "rgba(168,85,247,0.2)")
     .attr("font-size", "11px")
     .attr("font-family", "monospace")
-    .text("Try searching Apple, Microsoft or Berkshire Hathaway");
   return;
 }
 
