@@ -33,13 +33,14 @@ Open http://localhost:3000
 
 ## Architecture
 
+```
 frontend/
 ├── app/
 │   └── page.tsx          # Main page — search, data fetch, layout
 ├── components/
 │   ├── GraphStage.tsx    # D3 force graph rendering
 │   └── Sidebar.tsx       # Metrics and subsidiaries panel
-
+```
 ## Data Sources
 
 All data is fetched live from Wikidata SPARQL API. Relationships mapped:
