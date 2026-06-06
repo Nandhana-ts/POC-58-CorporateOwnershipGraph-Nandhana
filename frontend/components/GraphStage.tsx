@@ -34,16 +34,24 @@ export default function GraphStage({ graphData }: Props) {
     const height = svgRef.current.clientHeight;
 
     if (!graphData || !graphData.nodes?.length) {
-      svg.append("text")
-        .attr("x", width / 2)
-        .attr("y", height / 2)
-        .attr("text-anchor", "middle")
-        .attr("fill", "rgba(16,185,129,0.2)")
-        .attr("font-size", "14px")
-        .attr("font-family", "monospace")
-        .text("Search a company to explore its ownership graph");
-      return;
-    }
+  svg.append("text")
+    .attr("x", width / 2)
+    .attr("y", height / 2 - 10)
+    .attr("text-anchor", "middle")
+    .attr("fill", "rgba(168,85,247,0.4)")
+    .attr("font-size", "14px")
+    .attr("font-family", "monospace")
+    .text("No ownership data found for this company.");
+  svg.append("text")
+    .attr("x", width / 2)
+    .attr("y", height / 2 + 20)
+    .attr("text-anchor", "middle")
+    .attr("fill", "rgba(168,85,247,0.2)")
+    .attr("font-size", "11px")
+    .attr("font-family", "monospace")
+    .text("Try searching Apple, Microsoft or Berkshire Hathaway");
+  return;
+}
 
     const nodes: any[] = graphData.nodes.map((n: Node) => ({ ...n }));
     const edges: any[] = graphData.edges.map((e: Edge) => ({ ...e }));
