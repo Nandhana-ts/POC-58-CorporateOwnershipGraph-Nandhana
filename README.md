@@ -35,10 +35,10 @@ Open http://localhost:3000
 
 frontend/
 ├── app/
-│   └── page.tsx          # Main page — search, data fetch, layout
+│   └── page.tsx          
 ├── components/
-│   ├── GraphStage.tsx    # D3 force graph rendering
-│   └── Sidebar.tsx       # Metrics and subsidiaries panel
+│   ├── GraphStage.tsx    
+│   └── Sidebar.tsx       
 
 ## Data Sources
 
