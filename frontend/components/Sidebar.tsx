@@ -1,6 +1,32 @@
 "use client";
 import { useState } from "react";
 
+function PieChart({ data }: { data: { label: string; value: number; color: string }[] }) {
+  const total = data.reduce((sum, d) => sum + d.value, 0);
+  let startAngle = -Math.PI / 2;
+  const slices = data.map((d) => {
+    const angle = (d.value / total) * 2 * Math.PI;
+    const x1 = Math.cos(startAngle) * 80 + 100;
+    const y1 = Math.sin(startAngle) * 80 + 100;
+    const x2 = Math.cos(startAngle + angle) * 80 + 100;
+    const y2 = Math.sin(startAngle + angle) * 80 + 100;
+    const largeArc = angle > Math.PI ? 1 : 0;
+    const path = `M100,100 L${x1},${y1} A80,80 0 ${largeArc},1 ${x2},${y2} Z`;
+    startAngle += angle;
+    return { ...d, path };
+  });
+
+  return (
+    <svg width="200" height="200" viewBox="0 0 200 200">
+      {slices.map((s, i) => (
+        <path key={i} d={s.path} fill={s.color} opacity={0.85} stroke="rgba(0,0,0,0.3)" strokeWidth={1} />
+      ))}
+    </svg>
+  );
+}
+
+const COLORS = ["#a855f7", "#3b82f6", "#ec4899", "#f59e0b", "#10b981", "#f43f5e", "#06b6d4", "#84cc16"];
+
 export default function Sidebar({ graphData, selectedCompany, filters, onFilterChange }: {
   graphData: any;
   selectedCompany: string;
@@ -8,8 +34,10 @@ export default function Sidebar({ graphData, selectedCompany, filters, onFilterC
   onFilterChange: (filters: { type: string; country: string }) => void;
 }) {
   const [nodeSearch, setNodeSearch] = useState("");
+  const [pieOpen, setPieOpen] = useState(false);
 
   if (!graphData) return (
+    
     <div
       className="h-full flex flex-col justify-center items-center font-mono"
       style={{
@@ -28,27 +56,35 @@ export default function Sidebar({ graphData, selectedCompany, filters, onFilterC
   const investors = nodes.filter((n: any) => n.type === "investor");
   const people = nodes.filter((n: any) => n.type === "person");
 
-  // Jurisdiction concentration %
+  // Jurisdiction concentration
   const countryCounts: Record<string, number> = {};
   nodes.forEach((n: any) => {
     if (n.country) countryCounts[n.country] = (countryCounts[n.country] || 0) + 1;
   });
+  const nodesWithCountry = nodes.filter((n: any) => n.country);
   const topCountry = Object.entries(countryCounts).sort((a, b) => b[1] - a[1])[0];
-  const jurisdictionConc = topCountry ? Math.round((topCountry[1] / nodes.length) * 100) : 0;
+  const jurisdictionConc = topCountry
+    ? Math.round((topCountry[1] / nodesWithCountry.length) * 100)
+    : 0;
 
-  // Who controls the rail
+  // Pie chart data — top 8 countries, percentages relative to pieData total
+  const pieData = Object.entries(countryCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([label, value], i) => ({ label, value, color: COLORS[i % COLORS.length] }));
+
+  const pieTotal = pieData.reduce((sum, d) => sum + d.value, 0);
+
   const topInvestor = investors[0] || null;
-
-  // All unique countries for filter dropdown
   const allCountries = Array.from(new Set(nodes.map((n: any) => n.country).filter(Boolean))) as string[];
 
   const metrics = [
-    { label: "Total Nodes", value: nodes.length },
-    { label: "Subsidiaries", value: subsidiaries.length },
-    { label: "Investors", value: investors.length },
-    { label: "Key People", value: people.length },
-    { label: "Top Jurisdiction", value: topCountry ? topCountry[0] : "—" },
-    { label: "Jurisdiction Conc.", value: `${jurisdictionConc}%` },
+    { label: "Total Nodes", value: nodes.length, clickable: false },
+    { label: "Subsidiaries", value: subsidiaries.length, clickable: false },
+    { label: "Investors", value: investors.length, clickable: false },
+    { label: "Key People", value: people.length, clickable: false },
+    { label: "Top Jurisdiction", value: topCountry ? topCountry[0] : "—", clickable: false },
+    { label: "Jurisdiction Conc.", value: `${jurisdictionConc}%`, clickable: true },
   ];
 
   const nodeColor = (type: string) => {
@@ -82,14 +118,17 @@ export default function Sidebar({ graphData, selectedCompany, filters, onFilterC
         {metrics.map(m => (
           <div
             key={m.label}
-            className="rounded-xl p-3 flex flex-col gap-1"
+            onClick={() => m.clickable && setPieOpen(true)}
+            className="rounded-xl p-3 flex flex-col gap-1 transition"
             style={{
               background: "rgba(139,92,246,0.07)",
-              border: "1px solid rgba(139,92,246,0.15)",
+              border: m.clickable ? "1px solid rgba(139,92,246,0.4)" : "1px solid rgba(139,92,246,0.15)",
+              cursor: m.clickable ? "pointer" : "default",
             }}
           >
             <span className="text-violet-300 text-sm font-bold truncate">{m.value}</span>
             <span className="text-white/30 text-[9px] tracking-widest uppercase">{m.label}</span>
+            {m.clickable && <span className="text-violet-400/40 text-[8px]">click to view chart</span>}
           </div>
         ))}
       </div>
@@ -175,14 +214,9 @@ export default function Sidebar({ graphData, selectedCompany, filters, onFilterC
                     className="px-3 py-1.5 rounded-lg text-[10px] flex items-center gap-2"
                     style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.15)" }}
                   >
-                    <div
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ background: nodeColor(n.type) }}
-                    />
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: nodeColor(n.type) }} />
                     <span className="text-white/60">{n.label}</span>
-                    {n.country && (
-                      <span className="text-violet-400/40 text-[9px] ml-auto">{n.country}</span>
-                    )}
+                    {n.country && <span className="text-violet-400/40 text-[9px] ml-auto">{n.country}</span>}
                   </div>
                 ))
               )}
@@ -195,6 +229,7 @@ export default function Sidebar({ graphData, selectedCompany, filters, onFilterC
           <div className="text-violet-400/40 text-[9px] tracking-widest uppercase mb-3">Subsidiaries</div>
           {subsidiaries.length === 0 ? (
             <div className="text-white/20 text-[10px]">None found</div>
+            
           ) : (
             <div className="flex flex-col gap-1.5">
               {subsidiaries.map((s: any) => (
@@ -204,15 +239,58 @@ export default function Sidebar({ graphData, selectedCompany, filters, onFilterC
                   style={{ border: "1px solid rgba(139,92,246,0.1)" }}
                 >
                   {s.label}
-                  {s.country && (
-                    <span className="ml-2 text-violet-400/40 text-[9px]">{s.country}</span>
-                  )}
+                  {s.country && <span className="ml-2 text-violet-400/40 text-[9px]">{s.country}</span>}
                 </div>
               ))}
             </div>
           )}
         </div>
       </div>
+
+      {/* Pie Chart Modal */}
+      {pieOpen && (
+        <div
+          className="absolute inset-0 z-50 flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
+          onClick={() => setPieOpen(false)}
+        >
+          <div
+            className="w-72 rounded-2xl p-5 font-mono"
+            style={{
+              background: "rgba(10,8,20,0.98)",
+              border: "1px solid rgba(139,92,246,0.25)",
+              boxShadow: "0 0 40px rgba(139,92,246,0.15)",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="text-violet-400/40 text-[9px] tracking-widest uppercase mb-1">Breakdown</div>
+                <div className="text-white text-sm font-bold">Jurisdiction Distribution</div>
+              </div>
+              <button onClick={() => setPieOpen(false)} className="text-white/30 hover:text-white text-lg leading-none">×</button>
+            </div>
+
+            <div className="flex justify-center mb-4">
+              <PieChart data={pieData} />
+            </div>
+            <div className="text-white/20 text-[9px] text-center mb-2">Showing top 8 jurisdictions</div>
+            <div className="flex flex-col gap-1.5">
+              {pieData.map((d, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full" style={{ background: d.color }} />
+                    <span className="text-white/60 text-[10px]">{d.label}</span>
+                  </div>
+                  <span className="text-violet-300 text-[10px] font-bold">
+                    {Math.round((d.value / pieTotal) * 100)}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

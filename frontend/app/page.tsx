@@ -31,7 +31,14 @@ export default function Home() {
         const desc = c.description.toLowerCase();
         return companyKeywords.some(kw => desc.includes(kw));
       });
-      setResults(filtered.slice(0, 10));
+      const seen = new Set<string>();
+      const deduped = filtered.filter((c: any) => {
+      const key = c.name.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+setResults(deduped.slice(0, 10));
     } catch (err) {
       console.error("Search error:", err);
     }
