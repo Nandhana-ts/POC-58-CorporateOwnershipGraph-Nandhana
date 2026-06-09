@@ -10,40 +10,40 @@ export default function Home() {
   const [selectedCompany, setSelectedCompany] = useState("");
   const [infoOpen, setInfoOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [filters, setFilters] = useState({ type: "", country: "" });
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const handleSearch = async () => {
-  if (!query.trim()) return;
-  setLoading(true);
-  try {
-    // Use wbsearchentities (reliable, no CORS issues)
-    const res = await fetch(
-      `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(query)}&type=item&language=en&limit=20&format=json&origin=*`
-    );
-    const data = await res.json();
-    const candidates = (data.search || []).map((item: any) => ({
-      id: item.id,
-      name: item.label,
-      description: item.description || "",
-    }));
+    if (!query.trim()) return;
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(query)}&type=item&language=en&limit=20&format=json&origin=*`
+      );
+      const data = await res.json();
+      const candidates = (data.search || []).map((item: any) => ({
+        id: item.id,
+        name: item.label,
+        description: item.description || "",
+      }));
+      const companyKeywords = ["company", "corporation", "inc", "ltd", "limited", "enterprise", "business", "conglomerate", "firm", "group", "holdings", "plc", "llc", "multinational"];
+      const filtered = candidates.filter((c: any) => {
+        const desc = c.description.toLowerCase();
+        return companyKeywords.some(kw => desc.includes(kw));
+      });
+      setResults(filtered.slice(0, 10));
+    } catch (err) {
+      console.error("Search error:", err);
+    }
+    setLoading(false);
+  };
 
-    // Filter to only company-like results by checking description keywords
-    const companyKeywords = ["company", "corporation", "inc", "ltd", "limited", "enterprise", "business", "conglomerate", "firm", "group", "holdings", "plc", "llc", "multinational"];
-    const filtered = candidates.filter((c: any) => {
-      const desc = c.description.toLowerCase();
-      return companyKeywords.some(kw => desc.includes(kw));
-    });
-
-    setResults(filtered.slice(0, 10));
-  } catch (err) {
-    console.error("Search error:", err);
-  }
-  setLoading(false);
-};
   const handleSelect = async (company: any) => {
     setSelectedCompany(company.name);
     setResults([]);
     setQuery(company.name);
     setLoading(true);
+    setFilters({ type: "", country: "" });
     try {
       const sparql1 = `
         SELECT ?node ?nodeLabel ?rel ?countryLabel WHERE {
@@ -174,6 +174,27 @@ export default function Home() {
     setLoading(false);
   };
 
+  const filteredGraphData = graphData ? {
+    ...graphData,
+    nodes: graphData.nodes.filter((n: any) => {
+      if (filters.type && n.type !== "root" && n.type !== filters.type) return false;
+      if (filters.country && n.country !== filters.country) return false;
+      return true;
+    }),
+    edges: graphData.edges.filter((e: any) => {
+      const sourceId = e.source?.id || e.source;
+      const targetId = e.target?.id || e.target;
+      const allNodeIds = new Set(
+        graphData.nodes.filter((n: any) => {
+          if (filters.type && n.type !== "root" && n.type !== filters.type) return false;
+          if (filters.country && n.country !== filters.country) return false;
+          return true;
+        }).map((n: any) => n.id)
+      );
+      return allNodeIds.has(sourceId) && allNodeIds.has(targetId);
+    }),
+  } : null;
+
   const legendItems = [
     { type: "root", color: "#f59e0b", label: "Root Company" },
     { type: "subsidiary", color: "#3b82f6", label: "Subsidiary" },
@@ -235,7 +256,7 @@ export default function Home() {
 
       {/* ── Graph Stage ── */}
       <div className="absolute inset-0 z-10 pt-24">
-        <GraphStage graphData={graphData} />
+        <GraphStage graphData={filteredGraphData} />
       </div>
 
       {/* ── Node Legend (bottom-left) ── */}
@@ -262,9 +283,31 @@ export default function Home() {
         </div>
       </div>
 
+      {/* ── Sidebar Toggle Button ── */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="absolute top-1/2 z-50 -translate-y-1/2 w-5 h-10 flex items-center justify-center rounded-l-lg transition-all duration-300"
+        style={{
+          right: sidebarOpen ? "320px" : "0px",
+          background: "rgba(139,92,246,0.2)",
+          border: "1px solid rgba(139,92,246,0.3)",
+          color: "#a855f7",
+        }}
+      >
+        {sidebarOpen ? "›" : "‹"}
+      </button>
+
       {/* ── Sidebar ── */}
-      <div className="absolute top-0 right-0 h-full w-[320px] z-40">
-        <Sidebar graphData={graphData} selectedCompany={selectedCompany} />
+      <div
+        className="absolute top-0 right-0 h-full w-[320px] z-40 transition-transform duration-300"
+        style={{ transform: sidebarOpen ? "translateX(0)" : "translateX(320px)" }}
+      >
+        <Sidebar
+          graphData={graphData}
+          selectedCompany={selectedCompany}
+          filters={filters}
+          onFilterChange={setFilters}
+        />
       </div>
 
       {/* ── Info Modal ── */}

@@ -7,22 +7,15 @@ type Edge = { source: string; target: string };
 type Props = { graphData: any };
 
 const NODE_COLORS: Record<string, string> = {
-  root: "#f59e0b",       // amber - root company
-  subsidiary: "#3b82f6", // blue - subsidiary
-  person: "#ec4899",     // pink - key person
-  investor: "#a855f7",   // purple - investor
-};
-
-const NODE_LABELS: Record<string, string> = {
-  root: "Root Company",
-  subsidiary: "Subsidiary",
-  person: "Key Person",
-  investor: "Investor",
+  root: "#f59e0b",
+  subsidiary: "#3b82f6",
+  person: "#ec4899",
+  investor: "#a855f7",
 };
 
 export default function GraphStage({ graphData }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; node: any } | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; node: any; description?: string } | null>(null);
 
   useEffect(() => {
     if (!svgRef.current) return;
@@ -34,23 +27,24 @@ export default function GraphStage({ graphData }: Props) {
     const height = svgRef.current.clientHeight;
 
     if (!graphData || !graphData.nodes?.length) {
-  svg.append("text")
-    .attr("x", width / 2)
-    .attr("y", height / 2 - 10)
-    .attr("text-anchor", "middle")
-    .attr("fill", "rgba(168,85,247,0.4)")
-    .attr("font-size", "14px")
-    .attr("font-family", "monospace")
-    .text("No ownership data found for this company.");
-  svg.append("text")
-    .attr("x", width / 2)
-    .attr("y", height / 2 + 20)
-    .attr("text-anchor", "middle")
-    .attr("fill", "rgba(168,85,247,0.2)")
-    .attr("font-size", "11px")
-    .attr("font-family", "monospace")
-  return;
-}
+      svg.append("text")
+        .attr("x", width / 2)
+        .attr("y", height / 2 - 10)
+        .attr("text-anchor", "middle")
+        .attr("fill", "rgba(168,85,247,0.4)")
+        .attr("font-size", "14px")
+        .attr("font-family", "monospace")
+        .text("No ownership data found for this company.");
+      svg.append("text")
+        .attr("x", width / 2)
+        .attr("y", height / 2 + 20)
+        .attr("text-anchor", "middle")
+        .attr("fill", "rgba(168,85,247,0.2)")
+        .attr("font-size", "11px")
+        .attr("font-family", "monospace")
+        .text("Try searching Apple, Microsoft or Berkshire Hathaway");
+      return;
+    }
 
     const nodes: any[] = graphData.nodes.map((n: Node) => ({ ...n }));
     const edges: any[] = graphData.edges.map((e: Edge) => ({ ...e }));
@@ -68,7 +62,6 @@ export default function GraphStage({ graphData }: Props) {
       .force("center", d3.forceCenter(width / 2, height / 2))
       .force("collision", d3.forceCollide(55));
 
-    // Edge colors by target type
     const link = g.append("g")
       .selectAll("line")
       .data(edges)
@@ -96,29 +89,39 @@ export default function GraphStage({ graphData }: Props) {
             d.fx = null; d.fy = null;
           })
       )
-      .on("click", (event: any, d: any) => {
+      .on("click", async (event: any, d: any) => {
         event.stopPropagation();
         const rect = svgRef.current!.getBoundingClientRect();
         setTooltip({
           x: event.clientX - rect.left,
           y: event.clientY - rect.top,
           node: d,
+          description: "Loading...",
         });
+        try {
+          const res = await fetch(
+            `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${d.id}&props=descriptions&languages=en&format=json&origin=*`
+          );
+          const data = await res.json();
+          const desc = data.entities?.[d.id]?.descriptions?.en?.value || "No description available";
+          setTooltip(prev => prev ? { ...prev, description: desc } : null);
+        } catch {
+          setTooltip(prev => prev ? { ...prev, description: "No description available" } : null);
+        }
       });
 
-    // Click on SVG background to dismiss tooltip
     svg.on("click", () => setTooltip(null));
 
     // Glow circle
     node.append("circle")
       .attr("r", (d: any) => d.type === "root" ? 40 : 28)
-      .attr("fill", (d: any) => NODE_COLORS[d.type] || "#10b981")
+      .attr("fill", (d: any) => NODE_COLORS[d.type] || "#a855f7")
       .attr("opacity", 0.1);
 
     // Main circle
     node.append("circle")
       .attr("r", (d: any) => d.type === "root" ? 24 : 15)
-      .attr("fill", (d: any) => NODE_COLORS[d.type] || "#10b981")
+      .attr("fill", (d: any) => NODE_COLORS[d.type] || "#a855f7")
       .attr("opacity", 0.9)
       .attr("stroke", "rgba(0,0,0,0.4)")
       .attr("stroke-width", 0.5);
@@ -168,23 +171,23 @@ export default function GraphStage({ graphData }: Props) {
           style={{
             left: tooltip.x + 16,
             top: tooltip.y - 16,
-            background: "rgba(5,10,5,0.97)",
+            background: "rgba(5,5,15,0.97)",
             border: `1px solid ${NODE_COLORS[tooltip.node.type]}50`,
             borderRadius: "10px",
             boxShadow: `0 0 20px ${NODE_COLORS[tooltip.node.type]}20`,
             padding: "12px 16px",
-            minWidth: "180px",
+            minWidth: "200px",
+            maxWidth: "260px",
           }}
         >
-          <div
-            className="text-[10px] tracking-widest uppercase mb-1"
-            style={{ color: NODE_COLORS[tooltip.node.type] }}
-          >
-            {NODE_LABELS[tooltip.node.type] || tooltip.node.type}
-          </div>
-          <div className="text-white text-sm font-semibold">{tooltip.node.label}</div>
+          <div className="text-white text-sm font-semibold mb-1">{tooltip.node.label}</div>
           {tooltip.node.country && (
-            <div className="text-white/40 text-[10px] mt-1">📍 {tooltip.node.country}</div>
+            <div className="text-white/40 text-[10px]">📍 {tooltip.node.country}</div>
+          )}
+          {tooltip.description && (
+            <div className="text-white/30 text-[10px] mt-2 leading-relaxed border-t border-white/10 pt-2">
+              {tooltip.description}
+            </div>
           )}
         </div>
       )}
