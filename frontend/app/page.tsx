@@ -33,12 +33,12 @@ export default function Home() {
       });
       const seen = new Set<string>();
       const deduped = filtered.filter((c: any) => {
-      const key = c.name.toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-setResults(deduped.slice(0, 10));
+        const key = c.name.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      setResults(deduped.slice(0, 10));
     } catch (err) {
       console.error("Search error:", err);
     }
@@ -181,6 +181,17 @@ setResults(deduped.slice(0, 10));
     setLoading(false);
   };
 
+  const handleDownload = () => {
+    if (!graphData) return;
+    const blob = new Blob([JSON.stringify(graphData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${graphData.company.replace(/\s+/g, "_")}_ownership_graph.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const filteredGraphData = graphData ? {
     ...graphData,
     nodes: graphData.nodes.filter((n: any) => {
@@ -220,6 +231,15 @@ setResults(deduped.slice(0, 10));
         </div>
         <div className="flex items-center gap-4">
           <span className="text-white/30 text-xs">{selectedCompany || "No company selected"}</span>
+          {graphData && (
+            <button
+              onClick={handleDownload}
+              title="Download graph data as JSON"
+              className="px-3 py-1 rounded-lg border border-violet-500/30 text-violet-400 text-[10px] tracking-widest uppercase hover:bg-violet-500/10 transition"
+            >
+              ↓ Export
+            </button>
+          )}
           <button
             onClick={() => setInfoOpen(true)}
             className="w-7 h-7 rounded-full border border-violet-500/40 text-violet-400 hover:bg-violet-500/10 transition flex items-center justify-center text-sm font-bold"
@@ -268,7 +288,7 @@ setResults(deduped.slice(0, 10));
 
       {/* ── Node Legend (bottom-left) ── */}
       <div
-        className="absolute bottom-20 left-6 z-40 p-3 rounded-xl"
+        className="absolute bottom-8 left-6 z-40 p-3 rounded-xl"
         style={{
           background: "rgba(10,8,20,0.85)",
           border: "1px solid rgba(139,92,246,0.25)",
@@ -288,6 +308,37 @@ setResults(deduped.slice(0, 10));
             </div>
           ))}
         </div>
+      </div>
+
+      {/* ── Attribution Bar (bottom) ── */}
+      <div className="absolute bottom-0 left-0 right-0 z-40 flex items-center justify-center gap-6 px-6 py-1.5 bg-black/40 backdrop-blur-sm border-t border-white/5">
+        <span className="text-white/20 text-[9px] tracking-widest uppercase">Data Sources</span>
+        <a
+          href="https://www.sec.gov/cgi-bin/browse-edgar"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-violet-400/40 text-[9px] tracking-widest uppercase hover:text-violet-300 transition"
+        >
+          SEC EDGAR
+        </a>
+        <span className="text-white/10 text-[9px]">·</span>
+        <a
+          href="https://opencorporates.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-violet-400/40 text-[9px] tracking-widest uppercase hover:text-violet-300 transition"
+        >
+          OpenCorporates
+        </a>
+        <span className="text-white/10 text-[9px]">·</span>
+        <a
+          href="https://www.wikidata.org"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-violet-400/40 text-[9px] tracking-widest uppercase hover:text-violet-300 transition"
+        >
+          Wikidata
+        </a>
       </div>
 
       {/* ── Sidebar Toggle Button ── */}
