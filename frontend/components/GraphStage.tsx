@@ -13,6 +13,13 @@ const NODE_COLORS: Record<string, string> = {
   investor: "#a855f7",
 };
 
+const NODE_TYPE_LABELS: Record<string, string> = {
+  root: "Root Company",
+  subsidiary: "Subsidiary",
+  investor: "Investor / Parent",
+  person: "Key Person",
+};
+
 export default function GraphStage({ graphData }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; node: any; description?: string } | null>(null);
@@ -57,11 +64,11 @@ export default function GraphStage({ graphData }: Props) {
     );
 
     const simulation = d3.forceSimulation<any>(nodes)
-  .force("link", d3.forceLink(edges).id((d: any) => d.id).distance(140))
-  .force("charge", d3.forceManyBody().strength(-500))
-  .force("center", d3.forceCenter(width / 2, height / 2))
-  .force("collision", d3.forceCollide(55))
-  .alphaDecay(0.05);
+      .force("link", d3.forceLink(edges).id((d: any) => d.id).distance(140))
+      .force("charge", d3.forceManyBody().strength(-500))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collision", d3.forceCollide(55))
+      .alphaDecay(0.05);
 
     const link = g.append("g")
       .selectAll("line")
@@ -181,12 +188,34 @@ export default function GraphStage({ graphData }: Props) {
             maxWidth: "260px",
           }}
         >
+          {/* Type badge */}
+          <div className="mb-2">
+            <span
+              className="text-[9px] tracking-widest uppercase px-2 py-0.5 rounded-full"
+              style={{
+                background: NODE_COLORS[tooltip.node.type] + "20",
+                border: `1px solid ${NODE_COLORS[tooltip.node.type]}50`,
+                color: NODE_COLORS[tooltip.node.type],
+              }}
+            >
+              {NODE_TYPE_LABELS[tooltip.node.type] || tooltip.node.type}
+            </span>
+          </div>
+
+          {/* Name */}
           <div className="text-white text-sm font-semibold mb-1">{tooltip.node.label}</div>
+
+          {/* Country */}
           {tooltip.node.country && (
             <div className="text-white/40 text-[10px]">📍 {tooltip.node.country}</div>
           )}
+
+          {/* Wikidata ID */}
+          <div className="text-white/20 text-[9px] mt-1">ID: {tooltip.node.id}</div>
+
+          {/* Description */}
           {tooltip.description && (
-            <div className="text-white/30 text-[10px] mt-2 leading-relaxed border-t border-white/10 pt-2">
+            <div className="text-white/40 text-[10px] mt-2 leading-relaxed border-t border-white/10 pt-2">
               {tooltip.description}
             </div>
           )}
