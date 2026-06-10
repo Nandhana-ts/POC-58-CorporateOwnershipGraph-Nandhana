@@ -288,7 +288,7 @@ export default function Home() {
 
       {/* ── Node Legend (bottom-left) ── */}
       <div
-        className="absolute bottom-8 left-6 z-40 p-3 rounded-xl"
+        className="absolute bottom-14 left-6 z-40 p-3 rounded-xl"
         style={{
           background: "rgba(10,8,20,0.85)",
           border: "1px solid rgba(139,92,246,0.25)",
@@ -392,7 +392,7 @@ export default function Home() {
               {[
                 { label: "Architect", value: "Nandhana T S" },
                 { label: "Stack", value: "Next.js · FastAPI · D3.js · Tailwind" },
-                { label: "Theme", value: "Violet · Dark Intelligence" },
+                
                 { label: "Dataset", value: "Wikidata SPARQL API" },
               ].map(({ label, value }) => (
                 <div key={label} className="flex items-start justify-between gap-4">
