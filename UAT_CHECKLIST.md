@@ -2,7 +2,7 @@
 **Project:** Corporate Ownership Graph  
 **Architect:** Nandhana T S  
 **Batch:** Real Rails · Batch 4  
-**Test Date:** 2026-06-06  
+**Test Date:** 2026-06-09  
 
 ---
 
@@ -16,7 +16,7 @@
 | 1.4 | Search returns non-company entities | Filtered out by keyword check | ✅ PASS |
 | 1.5 | Click a company from dropdown | Graph loads for selected company | ✅ PASS |
 | 1.6 | Search with empty input | No fetch triggered | ✅ PASS |
-| 1.7 | Search returns duplicate company names | Only one entry shown per unique name | ✅ PASS |
+| 1.7 | Search same company twice | Deduplication prevents repeated results | ✅ PASS |
 
 ---
 
@@ -37,7 +37,7 @@
 
 | # | Test Case | Expected Result | Status |
 |---|---|---|---|
-| 3.1 | Click a node | Tooltip appears with name, type, country, and Wikidata description | ✅ PASS |
+| 3.1 | Click a node | Tooltip appears with type badge, name, country, Wikidata ID, live description | ✅ PASS |
 | 3.2 | Click SVG background | Tooltip dismisses | ✅ PASS |
 | 3.3 | Drag a node | Node moves, simulation adjusts | ✅ PASS |
 | 3.4 | Scroll on graph | Zoom in/out works | ✅ PASS |
@@ -45,30 +45,32 @@
 
 ---
 
-## 4. Node Search & Filters
+## 4. Sidebar
 
 | # | Test Case | Expected Result | Status |
 |---|---|---|---|
-| 4.1 | Type in node search box | Matching node is highlighted in the graph | ✅ PASS |
-| 4.2 | Filter by node type (subsidiary) | Only subsidiary nodes remain visible | ✅ PASS |
-| 4.3 | Filter by node type (investor) | Only investor nodes remain visible | ✅ PASS |
-| 4.4 | Filter by node type (person) | Only person nodes remain visible | ✅ PASS |
-| 4.5 | Filter by jurisdiction | Only nodes in selected country remain visible | ✅ PASS |
-| 4.6 | Clear filters | All nodes visible again | ✅ PASS |
+| 4.1 | No company selected | Shows "No data loaded" state | ✅ PASS |
+| 4.2 | Company selected | Shows company name as heading | ✅ PASS |
+| 4.3 | Metric boxes | Total Nodes, Subsidiaries, Investors, Key People shown | ✅ PASS |
+| 4.4 | Jurisdiction Concentration % | Derived metric shows top-country percentage | ✅ PASS |
+| 4.5 | Subsidiaries list | All subsidiaries listed with country | ✅ PASS |
+| 4.6 | Subsidiaries list scrollable | Scroll works for long lists | ✅ PASS |
+| 4.7 | Sidebar toggle button | Sidebar collapses and expands | ✅ PASS |
+| 4.8 | Why This Matters section | Visible in sidebar with contextual text | ✅ PASS |
+| 4.9 | Who Controls the Rail section | Top controller breakdown shown | ✅ PASS |
 
 ---
 
-## 5. Sidebar
+## 5. Node Search & Filters
 
 | # | Test Case | Expected Result | Status |
 |---|---|---|---|
-| 5.1 | No company selected | Shows "No data loaded" state | ✅ PASS |
-| 5.2 | Company selected | Shows company name as heading | ✅ PASS |
-| 5.3 | Metric boxes | Total Nodes, Subsidiaries, Investors, Key People shown | ✅ PASS |
-| 5.4 | Subsidiaries list | All subsidiaries listed with country | ✅ PASS |
-| 5.5 | Subsidiaries list scrollable | Scroll works for long lists | ✅ PASS |
-| 5.6 | Sidebar toggle button | Sidebar collapses and expands correctly | ✅ PASS |
-| 5.7 | Graph resizes on sidebar collapse | Graph occupies full width when sidebar is hidden | ✅ PASS |
+| 5.1 | Filter by Subsidiary | Only subsidiary nodes visible in graph | ✅ PASS |
+| 5.2 | Filter by Investor | Only investor nodes visible in graph | ✅ PASS |
+| 5.3 | Filter by Person | Only key person nodes visible in graph | ✅ PASS |
+| 5.4 | Filter by Jurisdiction | Nodes from selected country shown | ✅ PASS |
+| 5.5 | Clear filter | All nodes restored | ✅ PASS |
+| 5.6 | Node search by name | Matching nodes highlighted/shown | ✅ PASS |
 
 ---
 
@@ -76,75 +78,75 @@
 
 | # | Test Case | Expected Result | Status |
 |---|---|---|---|
-| 6.1 | Jurisdiction Conc. metric box | Shows top country's % share of all nodes with country data | ✅ PASS |
-| 6.2 | Jurisdiction Distribution pie chart | Opens modal with country breakdown pie chart | ✅ PASS |
-| 6.3 | Pie chart percentages | Percentages add up to ~100% (rounding allowed) | ✅ PASS |
-| 6.4 | Pie chart legend | Each slice has a matching legend entry with % | ✅ PASS |
-| 6.5 | "Showing top 8 jurisdictions" note | Displayed below pie chart | ✅ PASS |
-| 6.6 | Company with nodes in 1 country | Conc. shows 100%, pie shows single slice | ✅ PASS |
+| 6.1 | Jurisdiction Concentration % shown | Correct % for top country | ✅ PASS |
+| 6.2 | Pie chart opens | Click triggers pie chart modal | ✅ PASS |
+| 6.3 | Pie chart slices correct | Colors and labels match countries | ✅ PASS |
+| 6.4 | Pie chart closes | Dismiss works correctly | ✅ PASS |
+| 6.5 | Single-country graph | 100% concentration shown | ✅ PASS |
+| 6.6 | Multi-country graph | Distribution split shown correctly | ✅ PASS |
 
 ---
 
-## 7. Intelligence Sections
+## 7. Node Legend
 
 | # | Test Case | Expected Result | Status |
 |---|---|---|---|
-| 7.1 | "Why This Matters" section | Visible in sidebar with relevant context text | ✅ PASS |
-| 7.2 | "Who Controls the Rail" section | Shows dominant controlling entity name | ✅ PASS |
+| 7.1 | Legend visible on empty state | Yes, bottom-left | ✅ PASS |
+| 7.2 | Legend visible with graph loaded | Yes, not overlapping | ✅ PASS |
+| 7.3 | Legend colors match graph nodes | Amber, Blue, Purple, Pink match | ✅ PASS |
+| 7.4 | All 4 node types shown | Root, Subsidiary, Investor, Key Person fully visible | ✅ PASS |
 
 ---
 
-## 8. Node Legend
+## 8. Loading States
 
 | # | Test Case | Expected Result | Status |
 |---|---|---|---|
-| 8.1 | Legend visible on empty state | Yes, bottom-left | ✅ PASS |
-| 8.2 | Legend visible with graph loaded | Yes, not overlapping | ✅ PASS |
-| 8.3 | Legend colors match graph nodes | Amber, Blue, Purple, Pink match | ✅ PASS |
-| 8.4 | All 4 node types shown | Root, Subsidiary, Investor, Key Person | ✅ PASS |
+| 8.1 | Search button during fetch | Shows "..." | ✅ PASS |
+| 8.2 | Graph loads after fetch | Renders without page reload | ✅ PASS |
 
 ---
 
-## 9. Loading States
+## 9. Edge Cases
 
 | # | Test Case | Expected Result | Status |
 |---|---|---|---|
-| 9.1 | Search button during fetch | Shows "..." | ✅ PASS |
-| 9.2 | Graph loads after fetch | Renders without page reload | ✅ PASS |
+| 9.1 | Company with no subsidiaries | Subsidiaries section shows "None found" | ✅ PASS |
+| 9.2 | Node with no country | Country tag not shown | ✅ PASS |
+| 9.3 | Raw Wikidata IDs (Q12345) | Filtered out, not shown as nodes | ✅ PASS |
+| 9.4 | Search with network error | Error logged, no crash | ✅ PASS |
+| 9.5 | Wikidata description fetch failure | Shows "No description available" gracefully | ✅ PASS |
 
 ---
 
-## 10. Edge Cases
+## 10. Info Modal
 
 | # | Test Case | Expected Result | Status |
 |---|---|---|---|
-| 10.1 | Company with no subsidiaries | Subsidiaries section shows "None found" | ✅ PASS |
-| 10.2 | Node with no country | Country tag not shown | ✅ PASS |
-| 10.3 | Raw Wikidata IDs (Q12345) | Filtered out, not shown as nodes | ✅ PASS |
-| 10.4 | Search with network error | Error logged, no crash | ✅ PASS |
-| 10.5 | Node click description fetch fails | Tooltip still shows name, type, country | ✅ PASS |
+| 10.1 | Click "i" button | Modal opens | ✅ PASS |
+| 10.2 | Click outside modal | Modal closes | ✅ PASS |
+| 10.3 | Click Acknowledge | Modal closes | ✅ PASS |
+| 10.4 | Modal shows correct details | Architect, Stack, Dataset shown (no Theme row) | ✅ PASS |
 
 ---
 
-## 11. Info Modal
+## 11. Download & Attribution
 
 | # | Test Case | Expected Result | Status |
 |---|---|---|---|
-| 11.1 | Click "i" button | Modal opens | ✅ PASS |
-| 11.2 | Click outside modal | Modal closes | ✅ PASS |
-| 11.3 | Click Acknowledge | Modal closes | ✅ PASS |
-| 11.4 | Modal shows correct details | Architect, Stack, Theme, Dataset | ✅ PASS |
+| 11.1 | Click ↓ Export button | JSON file downloads with company name | ✅ PASS |
+| 11.2 | Downloaded JSON structure | Contains company, nodes, edges | ✅ PASS |
+| 11.3 | SEC EDGAR attribution link | Visible in footer bar, opens correct URL | ✅ PASS |
+| 11.4 | OpenCorporates attribution link | Visible in footer bar, opens correct URL | ✅ PASS |
+| 11.5 | Wikidata attribution link | Visible in footer bar, opens correct URL | ✅ PASS |
 
 ---
 
-## Process Learning
-
-- Repomix method was not followed during this phase
+Process Learning:
+- Repomix method was not followed during Phase 1
 - Debugging was done directly without generating repomix context
 - Checkpoint commits before AI changes were missed
-- These process gaps will be strictly followed in Phase 2
-
----
+- These process gaps will be strictly followed in future phases
 
 ## UAT Result: ✅ FULL PASS
 All critical test cases passed. System is production-ready.

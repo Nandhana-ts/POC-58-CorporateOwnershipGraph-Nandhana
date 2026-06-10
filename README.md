@@ -4,24 +4,23 @@ A production-quality intelligence system that visualizes corporate ownership str
 
 ## Overview
 
-Search any company and instantly explore its subsidiaries, parent companies, investors, and key people through an interactive force-directed graph. The sidebar provides live intelligence metrics including jurisdiction analysis and ownership distribution.
+Search any company and instantly explore its subsidiaries, parent companies, investors, and key people through an interactive force-directed graph.
 
 ## Features
 
-- **Smart Company Search** — filters to real companies only using Wikidata entity descriptions; deduplicates results with the same name
+- **Smart Company Search** — filters to real companies only using Wikidata entity descriptions; deduplication prevents repeated results
 - **Interactive Force Graph** — drag, zoom, pan nodes powered by D3.js
 - **Color-Coded Nodes** — amber (root), blue (subsidiary), purple (investor), pink (key person)
-- **Node Search** — search and highlight a specific node within the graph
-- **Node Filters** — filter visible nodes by type (subsidiary, investor, person) and by jurisdiction
-- **Node Click Description** — click any node to see a live Wikidata description fetched in real time
-- **Sidebar Toggle** — collapse/expand the sidebar to maximise graph space
-- **Live Sidebar** — real-time metrics including total nodes, subsidiaries, investors, and key people
-- **Jurisdiction Concentration** — single metric showing what % of nodes are concentrated in the top country
-- **Jurisdiction Distribution** — interactive pie chart showing country-wise breakdown (top 8 jurisdictions)
-- **Why This Matters** — contextual intelligence section explaining the ownership structure's significance
-- **Who Controls the Rail** — highlights the dominant controlling entity in the graph
-- **Node Tooltips** — click any node for name, type, country, and live Wikidata description
+- **Node Search & Filters** — filter visible nodes by type (subsidiary/investor/person) or jurisdiction in real time
+- **Live Sidebar** — real-time metrics, scrollable subsidiaries list, sidebar toggle for smaller screens
+- **Jurisdiction Concentration %** — derived metric showing top-country node concentration with full pie chart
+- **Why This Matters** — contextual intelligence section explaining ownership significance
+- **Who Controls the Rail** — top controller breakdown in the sidebar
+- **Node Tooltips** — click any node for type badge, name, country, Wikidata ID, and live description
 - **Node Legend** — always-visible reference at bottom-left
+- **Downloadable Sample Data** — export current graph as JSON via ↓ Export button in header
+- **Enhanced Tooltips** — colored type badge, Wikidata entity ID, and live Wikidata description on click
+- **Attribution Bar** — SEC EDGAR, OpenCorporates, and Wikidata credited at the bottom
 
 ## Tech Stack
 
@@ -46,21 +45,22 @@ Open http://localhost:3000
 ```
 frontend/
 ├── app/
-│   └── page.tsx          # Main page — search, data fetch, layout, filters, node search
+│   └── page.tsx          # Main page — search, data fetch, layout, export
 ├── components/
-│   ├── GraphStage.tsx    # D3 force graph rendering
-│   └── Sidebar.tsx       # Metrics, jurisdiction analysis, pie chart, subsidiaries panel
+│   ├── GraphStage.tsx    # D3 force graph rendering + enhanced tooltips
+│   └── Sidebar.tsx       # Metrics, filters, intelligence sections, pie chart
 ```
 
 ## Data Sources
 
-All data is fetched live from Wikidata SPARQL API. Relationships mapped:
-- Subsidiaries (P355)
-- Parent company (P749)
-- CEO (P169), Chairperson (P488), Board member (P3320)
-- Owned by / Investor (P127)
+All data is fetched live from:
+- **Wikidata SPARQL API** — corporate relationships (P355, P749, P169, P488, P3320, P127)
+- **SEC EDGAR** — https://www.sec.gov/cgi-bin/browse-edgar
+- **OpenCorporates** — https://opencorporates.com
 
-Node descriptions are fetched on-demand from the Wikidata `wbgetentities` API on node click.
+## Requirements
+
+See [REQUIREMENTS.md](./REQUIREMENTS.md) for full dependency list.
 
 ## Author
 
