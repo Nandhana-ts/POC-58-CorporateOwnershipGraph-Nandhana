@@ -37,11 +37,10 @@ export default function Sidebar({ graphData, selectedCompany, filters, onFilterC
   const [pieOpen, setPieOpen] = useState(false);
 
   if (!graphData) return (
-    
     <div
       className="h-full flex flex-col justify-center items-center font-mono"
       style={{
-        background: "rgba(10,8,20,0.7)",
+        background: "rgba(3,7,18,0.75)",
         borderLeft: "1px solid rgba(139,92,246,0.15)",
         backdropFilter: "blur(16px)",
       }}
@@ -55,6 +54,7 @@ export default function Sidebar({ graphData, selectedCompany, filters, onFilterC
   const subsidiaries = nodes.filter((n: any) => n.type === "subsidiary");
   const investors = nodes.filter((n: any) => n.type === "investor");
   const people = nodes.filter((n: any) => n.type === "person");
+  const layer2 = nodes.filter((n: any) => n.depth === 2);
 
   // Jurisdiction concentration
   const countryCounts: Record<string, number> = {};
@@ -67,14 +67,12 @@ export default function Sidebar({ graphData, selectedCompany, filters, onFilterC
     ? Math.round((topCountry[1] / nodesWithCountry.length) * 100)
     : 0;
 
-  // Pie chart data — top 8 countries, percentages relative to pieData total
   const pieData = Object.entries(countryCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8)
     .map(([label, value], i) => ({ label, value, color: COLORS[i % COLORS.length] }));
 
   const pieTotal = pieData.reduce((sum, d) => sum + d.value, 0);
-
   const topInvestor = investors[0] || null;
   const allCountries = Array.from(new Set(nodes.map((n: any) => n.country).filter(Boolean))) as string[];
 
@@ -83,7 +81,7 @@ export default function Sidebar({ graphData, selectedCompany, filters, onFilterC
     { label: "Subsidiaries", value: subsidiaries.length, clickable: false },
     { label: "Investors", value: investors.length, clickable: false },
     { label: "Key People", value: people.length, clickable: false },
-    { label: "Top Jurisdiction", value: topCountry ? topCountry[0] : "—", clickable: false },
+    { label: "Layer 2 Nodes", value: layer2.length, clickable: false },
     { label: "Jurisdiction Conc.", value: `${jurisdictionConc}%`, clickable: true },
   ];
 
@@ -102,7 +100,7 @@ export default function Sidebar({ graphData, selectedCompany, filters, onFilterC
     <div
       className="h-full flex flex-col font-mono overflow-hidden"
       style={{
-        background: "rgba(10,8,20,0.75)",
+        background: "rgba(3,7,18,0.75)",
         borderLeft: "1px solid rgba(139,92,246,0.15)",
         backdropFilter: "blur(16px)",
       }}
@@ -172,22 +170,22 @@ export default function Sidebar({ graphData, selectedCompany, filters, onFilterC
               value={filters.type}
               onChange={e => onFilterChange({ ...filters, type: e.target.value })}
               className="w-full border border-violet-500/20 rounded-lg px-3 py-1.5 text-white/60 text-[10px] focus:outline-none focus:border-violet-500/50"
-              style={{ background: "#0d0d18" }}
+              style={{ background: "#030712" }}
             >
-              <option value="" style={{ background: "#0d0d18", color: "#ffffff99" }}>All Node Types</option>
-              <option value="subsidiary" style={{ background: "#0d0d18", color: "#ffffff99" }}>Subsidiaries</option>
-              <option value="investor" style={{ background: "#0d0d18", color: "#ffffff99" }}>Investors</option>
-              <option value="person" style={{ background: "#0d0d18", color: "#ffffff99" }}>Key People</option>
+              <option value="" style={{ background: "#030712", color: "#ffffff99" }}>All Node Types</option>
+              <option value="subsidiary" style={{ background: "#030712", color: "#ffffff99" }}>Subsidiaries</option>
+              <option value="investor" style={{ background: "#030712", color: "#ffffff99" }}>Investors</option>
+              <option value="person" style={{ background: "#030712", color: "#ffffff99" }}>Key People</option>
             </select>
             <select
               value={filters.country}
               onChange={e => onFilterChange({ ...filters, country: e.target.value })}
               className="w-full border border-violet-500/20 rounded-lg px-3 py-1.5 text-white/60 text-[10px] focus:outline-none focus:border-violet-500/50"
-              style={{ background: "#0d0d18" }}
+              style={{ background: "#030712" }}
             >
-              <option value="" style={{ background: "#0d0d18", color: "#ffffff99" }}>All Jurisdictions</option>
+              <option value="" style={{ background: "#030712", color: "#ffffff99" }}>All Jurisdictions</option>
               {allCountries.map(c => (
-                <option key={c} value={c} style={{ background: "#0d0d18", color: "#ffffff99" }}>{c}</option>
+                <option key={c} value={c} style={{ background: "#030712", color: "#ffffff99" }}>{c}</option>
               ))}
             </select>
           </div>
@@ -201,7 +199,8 @@ export default function Sidebar({ graphData, selectedCompany, filters, onFilterC
             value={nodeSearch}
             onChange={e => setNodeSearch(e.target.value)}
             placeholder="Search any node..."
-            className="w-full bg-white/5 border border-violet-500/20 rounded-lg px-3 py-1.5 text-white/60 text-[10px] placeholder-white/20 focus:outline-none focus:border-violet-500/50"
+            className="w-full border border-violet-500/20 rounded-lg px-3 py-1.5 text-white/60 text-[10px] placeholder-white/20 focus:outline-none focus:border-violet-500/50"
+            style={{ background: "rgba(255,255,255,0.05)" }}
           />
           {nodeSearch && (
             <div className="mt-2 flex flex-col gap-1">
@@ -216,6 +215,7 @@ export default function Sidebar({ graphData, selectedCompany, filters, onFilterC
                   >
                     <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: nodeColor(n.type) }} />
                     <span className="text-white/60">{n.label}</span>
+                    {n.depth === 2 && <span className="text-violet-400/30 text-[8px]">L2</span>}
                     {n.country && <span className="text-violet-400/40 text-[9px] ml-auto">{n.country}</span>}
                   </div>
                 ))
@@ -229,17 +229,19 @@ export default function Sidebar({ graphData, selectedCompany, filters, onFilterC
           <div className="text-violet-400/40 text-[9px] tracking-widest uppercase mb-3">Subsidiaries</div>
           {subsidiaries.length === 0 ? (
             <div className="text-white/20 text-[10px]">None found</div>
-            
           ) : (
             <div className="flex flex-col gap-1.5">
               {subsidiaries.map((s: any) => (
                 <div
                   key={s.id}
-                  className="px-3 py-2 rounded-lg text-[11px] text-white/60 hover:text-white/90 hover:bg-violet-500/10 transition"
+                  className="px-3 py-2 rounded-lg text-[11px] text-white/60 hover:text-white/90 hover:bg-violet-500/10 transition flex items-center gap-2"
                   style={{ border: "1px solid rgba(139,92,246,0.1)" }}
                 >
-                  {s.label}
-                  {s.country && <span className="ml-2 text-violet-400/40 text-[9px]">{s.country}</span>}
+                  <span className="flex-1">{s.label}</span>
+                  {s.depth === 2 && (
+                    <span className="text-violet-400/30 text-[8px] shrink-0">L2</span>
+                  )}
+                  {s.country && <span className="text-violet-400/40 text-[9px] shrink-0">{s.country}</span>}
                 </div>
               ))}
             </div>
@@ -257,7 +259,7 @@ export default function Sidebar({ graphData, selectedCompany, filters, onFilterC
           <div
             className="w-72 rounded-2xl p-5 font-mono"
             style={{
-              background: "rgba(10,8,20,0.98)",
+              background: "rgba(3,7,18,0.98)",
               border: "1px solid rgba(139,92,246,0.25)",
               boxShadow: "0 0 40px rgba(139,92,246,0.15)",
             }}
@@ -270,7 +272,6 @@ export default function Sidebar({ graphData, selectedCompany, filters, onFilterC
               </div>
               <button onClick={() => setPieOpen(false)} className="text-white/30 hover:text-white text-lg leading-none">×</button>
             </div>
-
             <div className="flex justify-center mb-4">
               <PieChart data={pieData} />
             </div>

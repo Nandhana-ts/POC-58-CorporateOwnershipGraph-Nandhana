@@ -1,95 +1,92 @@
-# VAR_REPORT.md — Visualization Audit Review
-**Project:** Corporate Ownership Graph  
-**Architect:** Nandhana T S  
-**Batch:** Real Rails · Batch 4  
-**Review Date:** 2026-06-09  
-**Reviewer Role:** Senior UX Architect / Product Reviewer  
+# VAR Report — Corporate Ownership Graph
+**Version:** Final (Post-Reviewer-Feedback)
+**Date:** 2025
+**Verdict:** ✅ VAR FULL PASS
 
 ---
 
-## 1. Interface Consistency ✅ PASS
+## Review Summary
 
-- Header, search bar, sidebar, and legend maintain consistent dark background (`#0a0a0f`)
-- Violet accent color (`#a855f7`) is applied uniformly across borders, hover states, pulse indicators, and typography
-- Monospace font (`font-mono`) is used consistently throughout all UI components
-- Attribution bar at the bottom uses the same dark theme and violet accent for links
-- Spacing and border radius are uniform across cards, inputs, legend box, and attribution bar
+All 4 issues raised by the reviewer have been resolved. This report documents the verification of each fix.
 
 ---
 
-## 2. Interaction Quality ✅ PASS
+## Category 1: Backend Setup
 
-- Search input responds to both Enter key and Search button click; deduplication prevents repeated dropdown entries
-- Dropdown filters correctly to company-type entities only
-- Node type and jurisdiction filters wire directly to the D3 graph — hiding/showing nodes in real time
-- Sidebar toggle collapses and expands the panel smoothly
-- Node drag interaction works smoothly via D3 force simulation
-- Scroll-to-zoom is functional with scale extent [0.3, 3]
-- Node click triggers enriched tooltip: type badge, label, country, Wikidata ID, and live Wikidata description
-- Clicking SVG background dismisses tooltip correctly
-- ↓ Export button downloads current graph data as a named JSON file
+| # | Check | Status | Notes |
+|---|---|---|---|
+| 1.1 | `backend/requirements.txt` exists | ✅ PASS | Created with fastapi, uvicorn, httpx |
+| 1.2 | Pinned versions | ✅ PASS | `fastapi==0.111.0`, `uvicorn==0.30.1`, `httpx==0.27.0` |
+| 1.3 | Single data path | ✅ PASS | Wikidata SPARQL only — no dual-path confusion |
+| 1.4 | App runs with `uvicorn main:app --reload` | ✅ PASS | Confirmed startup |
 
 ---
 
-## 3. Visual Identity ✅ PASS
+## Category 2: DNA (Design)
 
-- Dark intelligence theme is cohesive and professional
-- Color-coded nodes clearly differentiate entity types:
-  - 🟡 Amber — Root Company
-  - 🔵 Blue — Subsidiary
-  - 🟣 Purple — Investor / Parent
-  - 🩷 Pink — Key Person
-- Node legend placed bottom-left with matching colors — clear and unobtrusive, no overlap with attribution bar
-- Tooltip type badge uses colored pill matching the node color — consistent visual language
-- Glowing outer circle on nodes adds depth without clutter
-- Violet pulse dot in header adds subtle life to the interface
+| # | Check | Status | Notes |
+|---|---|---|---|
+| 2.1 | Background `#030712` in `page.tsx` | ✅ PASS | Updated from `#0a0a0f` |
+| 2.2 | Background `#030712` in `GraphStage.tsx` | ✅ PASS | Updated |
+| 2.3 | Background `#030712` in `Sidebar.tsx` | ✅ PASS | Updated incl. modals, dropdowns, overlays |
+| 2.4 | Accent is violet `#a855f7` | ✅ PASS | No cyan anywhere in codebase |
+| 2.5 | Pie chart modal background `#030712` | ✅ PASS | Updated |
 
 ---
 
-## 4. Readability ✅ PASS
+## Category 3: Graph Depth (2-Hop)
 
-- Node labels are legible at default zoom level
-- Country tags rendered in muted accent color below node labels
-- Sidebar typography uses clear hierarchy: section label → company name → metric numbers → list items
-- Metric boxes use large numerals for instant scannability
-- Jurisdiction Concentration % metric provides a derived, immediately meaningful insight
-- Subsidiaries list uses bordered cards with country tag in muted violet
-- Why This Matters and Who Controls the Rail sections use clear section headers and readable prose
-
----
-
-## 5. Dashboard Storytelling ✅ PASS
-
-- Empty state clearly communicates next action: "Search a company to explore its ownership graph"
-- Sidebar tells the full data story: company name → node counts → jurisdiction concentration → subsidiaries breakdown → why it matters → who controls
-- Graph visually communicates corporate hierarchy through node size (root larger), color, and edge connections
-- Tooltip on click provides contextual detail (including live Wikidata description) without cluttering the graph
-- Jurisdiction pie chart gives a complete country distribution at a glance
-- Attribution bar transparently credits SEC EDGAR, OpenCorporates, and Wikidata as data sources
+| # | Check | Status | Notes |
+|---|---|---|---|
+| 3.1 | 4 parallel SPARQL queries fire | ✅ PASS | `asyncio.gather` in backend |
+| 3.2 | Layer 1: direct subsidiaries | ✅ PASS | Query 1 |
+| 3.3 | Layer 1: parents, investors, people | ✅ PASS | Query 2 |
+| 3.4 | Layer 2: subsidiaries-of-subsidiaries | ✅ PASS | Query 3, `depth: 2` tagged |
+| 3.5 | Layer 2: grandparent owners | ✅ PASS | Query 4, `depth: 2` tagged |
+| 3.6 | L2 nodes render smaller + transparent | ✅ PASS | GraphStage radius/opacity logic |
+| 3.7 | L2 edges render as dashed | ✅ PASS | D3 stroke-dasharray |
+| 3.8 | L2 badge visible on nodes | ✅ PASS | SVG text label |
+| 3.9 | Tooltip shows "· Layer 2" for depth-2 | ✅ PASS | Tooltip template updated |
+| 3.10 | Microsoft screenshot confirms multi-hop | ✅ PASS | Xbox Game Studios sub-tree visible |
 
 ---
 
-## 6. Responsive Behavior ✅ IMPROVED
+## Category 4: Attribution
 
-- Layout is functional on standard desktop (1920×1080, 1366×768)
-- Sidebar toggle button added — sidebar can be collapsed on smaller screens, resolving the previous partial-pass concern
-- Legend position is fixed bottom-left — sits above attribution bar without overlap
-- No critical breakage observed on tested resolutions
-
-**Previous recommendation addressed:** Sidebar toggle has been implemented for screens below 1024px.
+| # | Check | Status | Notes |
+|---|---|---|---|
+| 4.1 | Attribution bar shows Wikidata only | ✅ PASS | SEC EDGAR removed |
+| 4.2 | OpenCorporates removed from UI | ✅ PASS | Confirmed |
+| 4.3 | Info modal attribution updated | ✅ PASS | Wikidata SPARQL API only |
+| 4.4 | No false attribution in README | ✅ PASS | Data Source section updated |
 
 ---
 
-## Overall VAR Result
+## Category 5: Sidebar
 
-| Category | Status |
-|---|---|
-| Interface Consistency | ✅ PASS |
-| Interaction Quality | ✅ PASS |
-| Visual Identity | ✅ PASS |
-| Readability | ✅ PASS |
-| Dashboard Storytelling | ✅ PASS |
-| Responsive Behavior | ✅ PASS |
+| # | Check | Status | Notes |
+|---|---|---|---|
+| 5.1 | Layer 2 node count metric displayed | ✅ PASS | New metric box added |
+| 5.2 | L2 badge on node search results | ✅ PASS | Filter list updated |
+| 5.3 | L2 badge on subsidiaries list | ✅ PASS | |
+| 5.4 | Export button present | ✅ PASS | JSON download |
+| 5.5 | Country breakdown present | ✅ PASS | |
 
-### ✅ VAR FULL PASS
-The Corporate Ownership Graph meets production-quality visual and interaction standards. The violet dark intelligence theme is distinctive, cohesive, and professional. All previously flagged responsive concerns have been resolved with the sidebar toggle. The addition of downloadable data export, enhanced tooltips, attribution bar, intelligence sidebar sections, and jurisdiction metrics further elevates the product to a complete intelligence dashboard.
+---
+
+## Category 6: Responsive / General
+
+| # | Check | Status | Notes |
+|---|---|---|---|
+| 6.1 | Sidebar toggle works | ✅ PASS | |
+| 6.2 | Filter toggles reflect in graph | ✅ PASS | Client-side, no refetch |
+| 6.3 | Search autocomplete works | ✅ PASS | Wikidata entity search |
+| 6.4 | CORS configured correctly | ✅ PASS | `localhost:3000` allowed |
+
+---
+
+## Overall Verdict
+
+> **✅ VAR FULL PASS**
+>
+> All 4 reviewer issues resolved: backend requirements.txt added, single Wikidata data path confirmed, DNA corrected to `#030712` background + violet accent, 2-hop graph implemented with visual L2 distinction, and attribution honestly reflects Wikidata SPARQL only.

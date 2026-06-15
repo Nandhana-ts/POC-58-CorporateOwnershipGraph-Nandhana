@@ -1,152 +1,163 @@
-# UAT_CHECKLIST.md — User Acceptance Testing
-**Project:** Corporate Ownership Graph  
-**Architect:** Nandhana T S  
-**Batch:** Real Rails · Batch 4  
-**Test Date:** 2026-06-09  
+# UAT Checklist — Corporate Ownership Graph
+**Version:** Final (Post-Reviewer-Feedback)
 
 ---
 
-## 1. Search Functionality
+## Setup Before Testing
 
-| # | Test Case | Expected Result | Status |
+```bash
+# Terminal 1 — Backend
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload
+
+# Terminal 2 — Frontend
+cd frontend
+npm install
+npm run dev
+```
+
+Open: http://localhost:3000
+
+---
+
+## Section 1: Search
+
+| # | Test Case | Expected | Pass/Fail |
 |---|---|---|---|
-| 1.1 | Type a company name and press Enter | Search triggers and dropdown appears | ✅ PASS |
-| 1.2 | Click Search button | Search triggers and dropdown appears | ✅ PASS |
-| 1.3 | Search "apple" | Only real companies shown (Apple Inc., Apple Corp etc.) | ✅ PASS |
-| 1.4 | Search returns non-company entities | Filtered out by keyword check | ✅ PASS |
-| 1.5 | Click a company from dropdown | Graph loads for selected company | ✅ PASS |
-| 1.6 | Search with empty input | No fetch triggered | ✅ PASS |
-| 1.7 | Search same company twice | Deduplication prevents repeated results | ✅ PASS |
+| 1.1 | Type "Microsoft" in search bar | Autocomplete suggestions appear | |
+| 1.2 | Select "Microsoft" from dropdown | Graph loads with nodes and edges | |
+| 1.3 | Search for "Alphabet" | Graph loads Google's ownership structure | |
+| 1.4 | Search for a non-existent company | Empty state shown, no crash | |
 
 ---
 
-## 2. Graph Rendering
+## Section 2: Graph — Layer 1
 
-| # | Test Case | Expected Result | Status |
+| # | Test Case | Expected | Pass/Fail |
 |---|---|---|---|
-| 2.1 | Select a company | Graph renders with nodes and edges | ✅ PASS |
-| 2.2 | Root node visible | Larger amber node at center | ✅ PASS |
-| 2.3 | Subsidiary nodes visible | Blue nodes connected to root | ✅ PASS |
-| 2.4 | Investor nodes visible | Purple nodes connected to root | ✅ PASS |
-| 2.5 | Key Person nodes visible | Pink nodes connected to root | ✅ PASS |
-| 2.6 | Edges render with correct color | Edge color matches target node type | ✅ PASS |
+| 2.1 | Load Microsoft | Direct subsidiaries visible (e.g. GitHub, LinkedIn) | |
+| 2.2 | Load Microsoft | Direct parent / investors visible | |
+| 2.3 | Hover node | Tooltip shows label, type, country | |
+| 2.4 | L1 nodes appear full size | Standard radius, full opacity, solid edges | |
 
 ---
 
-## 3. Interactions
+## Section 3: Graph — Layer 2 (2-Hop)
 
-| # | Test Case | Expected Result | Status |
+| # | Test Case | Expected | Pass/Fail |
 |---|---|---|---|
-| 3.1 | Click a node | Tooltip appears with type badge, name, country, Wikidata ID, live description | ✅ PASS |
-| 3.2 | Click SVG background | Tooltip dismisses | ✅ PASS |
-| 3.3 | Drag a node | Node moves, simulation adjusts | ✅ PASS |
-| 3.4 | Scroll on graph | Zoom in/out works | ✅ PASS |
-| 3.5 | Pan graph | Graph pans correctly | ✅ PASS |
+| 3.1 | Load Microsoft | Layer 2 nodes visible (e.g. Xbox Game Studios subsidiaries) | |
+| 3.2 | L2 nodes visually distinct | Smaller radius, lower opacity | |
+| 3.3 | L2 edges are dashed | Dashed stroke visible | |
+| 3.4 | L2 badge on nodes | "L2" text label visible on depth-2 nodes | |
+| 3.5 | Hover L2 node | Tooltip shows "· Layer 2" suffix | |
 
 ---
 
-## 4. Sidebar
+## Section 4: Filters
 
-| # | Test Case | Expected Result | Status |
+| # | Test Case | Expected | Pass/Fail |
 |---|---|---|---|
-| 4.1 | No company selected | Shows "No data loaded" state | ✅ PASS |
-| 4.2 | Company selected | Shows company name as heading | ✅ PASS |
-| 4.3 | Metric boxes | Total Nodes, Subsidiaries, Investors, Key People shown | ✅ PASS |
-| 4.4 | Jurisdiction Concentration % | Derived metric shows top-country percentage | ✅ PASS |
-| 4.5 | Subsidiaries list | All subsidiaries listed with country | ✅ PASS |
-| 4.6 | Subsidiaries list scrollable | Scroll works for long lists | ✅ PASS |
-| 4.7 | Sidebar toggle button | Sidebar collapses and expands | ✅ PASS |
-| 4.8 | Why This Matters section | Visible in sidebar with contextual text | ✅ PASS |
-| 4.9 | Who Controls the Rail section | Top controller breakdown shown | ✅ PASS |
+| 4.1 | Toggle off "Subsidiaries" | Subsidiary nodes disappear | |
+| 4.2 | Toggle off "Parents" | Parent nodes disappear | |
+| 4.3 | Toggle off "People" | People nodes disappear | |
+| 4.4 | Toggle off "Investors" | Investor nodes disappear | |
+| 4.5 | Re-enable all filters | All nodes return | |
 
 ---
 
-## 5. Node Search & Filters
+## Section 5: Sidebar Metrics
 
-| # | Test Case | Expected Result | Status |
+| # | Test Case | Expected | Pass/Fail |
 |---|---|---|---|
-| 5.1 | Filter by Subsidiary | Only subsidiary nodes visible in graph | ✅ PASS |
-| 5.2 | Filter by Investor | Only investor nodes visible in graph | ✅ PASS |
-| 5.3 | Filter by Person | Only key person nodes visible in graph | ✅ PASS |
-| 5.4 | Filter by Jurisdiction | Nodes from selected country shown | ✅ PASS |
-| 5.5 | Clear filter | All nodes restored | ✅ PASS |
-| 5.6 | Node search by name | Matching nodes highlighted/shown | ✅ PASS |
+| 5.1 | Load any company | Total Nodes count displayed | |
+| 5.2 | Load any company | Total Edges count displayed | |
+| 5.3 | Load any company | Layer 2 Nodes count displayed | |
+| 5.4 | Layer 2 count matches graph | Count = number of L2 nodes in graph | |
 
 ---
 
-## 6. Jurisdiction Metrics
+## Section 6: Pie Chart
 
-| # | Test Case | Expected Result | Status |
+| # | Test Case | Expected | Pass/Fail |
 |---|---|---|---|
-| 6.1 | Jurisdiction Concentration % shown | Correct % for top country | ✅ PASS |
-| 6.2 | Pie chart opens | Click triggers pie chart modal | ✅ PASS |
-| 6.3 | Pie chart slices correct | Colors and labels match countries | ✅ PASS |
-| 6.4 | Pie chart closes | Dismiss works correctly | ✅ PASS |
-| 6.5 | Single-country graph | 100% concentration shown | ✅ PASS |
-| 6.6 | Multi-country graph | Distribution split shown correctly | ✅ PASS |
+| 6.1 | Click pie chart button in sidebar | Modal opens with pie chart | |
+| 6.2 | Modal background | Background is `#030712` | |
+| 6.3 | Pie chart renders slices | Slices proportional to ownership % | |
+| 6.4 | Close modal | Modal closes, graph still visible | |
 
 ---
 
-## 7. Node Legend
+## Section 7: Node Search
 
-| # | Test Case | Expected Result | Status |
+| # | Test Case | Expected | Pass/Fail |
 |---|---|---|---|
-| 7.1 | Legend visible on empty state | Yes, bottom-left | ✅ PASS |
-| 7.2 | Legend visible with graph loaded | Yes, not overlapping | ✅ PASS |
-| 7.3 | Legend colors match graph nodes | Amber, Blue, Purple, Pink match | ✅ PASS |
-| 7.4 | All 4 node types shown | Root, Subsidiary, Investor, Key Person fully visible | ✅ PASS |
+| 7.1 | Type node name in sidebar search | Matching nodes listed | |
+| 7.2 | L2 nodes in results | "L2" badge shown on depth-2 results | |
+| 7.3 | Click a result | Graph highlights / zooms to node | |
 
 ---
 
-## 8. Loading States
+## Section 8: DNA (Design)
 
-| # | Test Case | Expected Result | Status |
+| # | Test Case | Expected | Pass/Fail |
 |---|---|---|---|
-| 8.1 | Search button during fetch | Shows "..." | ✅ PASS |
-| 8.2 | Graph loads after fetch | Renders without page reload | ✅ PASS |
+| 8.1 | Page background | `#030712` (near-black, not blue-tinted) | |
+| 8.2 | Sidebar background | `#030712` or rgba equivalent | |
+| 8.3 | Dropdowns / modals | `#030712` background | |
+| 8.4 | Accent color | Violet `#a855f7` (not cyan) | |
+| 8.5 | No cyan anywhere | Inspect — no `#06b6d4` or similar | |
 
 ---
 
-## 9. Edge Cases
+## Section 9: Attribution
 
-| # | Test Case | Expected Result | Status |
+| # | Test Case | Expected | Pass/Fail |
 |---|---|---|---|
-| 9.1 | Company with no subsidiaries | Subsidiaries section shows "None found" | ✅ PASS |
-| 9.2 | Node with no country | Country tag not shown | ✅ PASS |
-| 9.3 | Raw Wikidata IDs (Q12345) | Filtered out, not shown as nodes | ✅ PASS |
-| 9.4 | Search with network error | Error logged, no crash | ✅ PASS |
-| 9.5 | Wikidata description fetch failure | Shows "No description available" gracefully | ✅ PASS |
+| 9.1 | Attribution bar visible | "Wikidata SPARQL API" shown | |
+| 9.2 | No SEC EDGAR | SEC EDGAR not mentioned anywhere in UI | |
+| 9.3 | No OpenCorporates | OpenCorporates not mentioned anywhere in UI | |
+| 9.4 | Info modal attribution | Shows Wikidata only | |
 
 ---
 
-## 10. Info Modal
+## Section 10: Export
 
-| # | Test Case | Expected Result | Status |
+| # | Test Case | Expected | Pass/Fail |
 |---|---|---|---|
-| 10.1 | Click "i" button | Modal opens | ✅ PASS |
-| 10.2 | Click outside modal | Modal closes | ✅ PASS |
-| 10.3 | Click Acknowledge | Modal closes | ✅ PASS |
-| 10.4 | Modal shows correct details | Architect, Stack, Dataset shown (no Theme row) | ✅ PASS |
+| 10.1 | Click Export button | JSON file downloads | |
+| 10.2 | Open downloaded JSON | Contains `nodes` and `edges` arrays | |
+| 10.3 | Node entries | Each has: id, label, type, country, depth | |
+| 10.4 | Edge entries | Each has: source, target | |
+| 10.5 | L2 nodes in export | `depth: 2` on layer-2 nodes | |
 
 ---
 
-## 11. Download & Attribution
+## Section 11: Backend
 
-| # | Test Case | Expected Result | Status |
+| # | Test Case | Expected | Pass/Fail |
 |---|---|---|---|
-| 11.1 | Click ↓ Export button | JSON file downloads with company name | ✅ PASS |
-| 11.2 | Downloaded JSON structure | Contains company, nodes, edges | ✅ PASS |
-| 11.3 | SEC EDGAR attribution link | Visible in footer bar, opens correct URL | ✅ PASS |
-| 11.4 | OpenCorporates attribution link | Visible in footer bar, opens correct URL | ✅ PASS |
-| 11.5 | Wikidata attribution link | Visible in footer bar, opens correct URL | ✅ PASS |
+| 11.1 | `requirements.txt` exists in `/backend` | File present with 3 dependencies | |
+| 11.2 | `pip install -r requirements.txt` | Installs without errors | |
+| 11.3 | `uvicorn main:app --reload` | Server starts on port 8000 | |
+| 11.4 | `GET http://localhost:8000/docs` | FastAPI Swagger UI loads | |
+| 11.5 | POST `/graph` with valid entity ID | Returns `{ nodes, edges }` JSON | |
 
 ---
 
-Process Learning:
-- Repomix method was not followed during Phase 1
-- Debugging was done directly without generating repomix context
-- Checkpoint commits before AI changes were missed
-- These process gaps will be strictly followed in future phases
+## Section 12: Deduplication
 
-## UAT Result: ✅ FULL PASS
-All critical test cases passed. System is production-ready.
+| # | Test Case | Expected | Pass/Fail |
+|---|---|---|---|
+| 12.1 | Load company with overlapping queries | No duplicate nodes in graph | |
+| 12.2 | Load company with overlapping queries | No duplicate edges in graph | |
+
+---
+
+## Sign-off
+
+| Role | Name | Date | Signature |
+|---|---|---|---|
+| Developer | | | |
+| Reviewer | | | |

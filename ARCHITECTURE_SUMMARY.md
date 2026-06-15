@@ -1,133 +1,120 @@
-# Architecture Summary
-**Project:** Corporate Ownership Graph  
-**Architect:** Nandhana T S  
-**Batch:** Real Rails · Batch 4  
-
----
+# Architecture Summary — Corporate Ownership Graph
 
 ## System Overview
 
-The Corporate Ownership Graph is a single-page Next.js application that fetches corporate relationship data from Wikidata in real time and renders it as an interactive force-directed graph using D3.js.
-
----
-
-## Component Architecture
-
 ```
-┌──────────────────────────────────────────────────────┐
-│                      page.tsx                        │
-│  ┌─────────────┐  ┌──────────┐  ┌────────────────┐  │
-│  │   Header    │  │  Search  │  │  Info Modal    │  │
-│  │ + Export Btn│  │ Dropdown │  │ (no Theme row) │  │
-│  └─────────────┘  └──────────┘  └────────────────┘  │
-│  ┌──────────────────────┐  ┌──────────────────────┐  │
-│  │    GraphStage.tsx    │  │     Sidebar.tsx      │  │
-│  │  (D3 Force Graph +   │  │  Metrics · Filters · │  │
-│  │   Enhanced Tooltip)  │  │  Intelligence Panels │  │
-│  └──────────────────────┘  └──────────────────────┘  │
-│  ┌─────────────┐  ┌──────────────────────────────┐   │
-│  │ Node Legend │  │    Attribution Bar (footer)  │   │
-│  └─────────────┘  └──────────────────────────────┘   │
-└──────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    Browser (localhost:3000)                  │
+│                                                             │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  page.tsx                                            │  │
+│  │  [Search Bar] [Graph Area] [Export Button]           │  │
+│  │       │                                              │  │
+│  │  ┌────▼─────────┐    ┌──────────────────────────┐   │  │
+│  │  │ GraphStage   │    │       Sidebar             │   │  │
+│  │  │ (D3 force)   │    │ Metrics | Pie | Filters   │   │  │
+│  │  │ L1 + L2 nodes│    │ Node Search | Export      │   │  │
+│  │  │ Dashed edges │    │ L2 Badges | Layer 2 Count │   │  │
+│  │  └──────────────┘    └──────────────────────────┘   │  │
+│  └──────────────────────────────────────────────────────┘  │
+└───────────────────────┬─────────────────────────────────────┘
+                        │ HTTP (fetch)
+                        ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  FastAPI Backend (localhost:8000)            │
+│                                                             │
+│   POST /graph  →  asyncio.gather(4 SPARQL queries)          │
+│                                                             │
+│   Query 1: Direct subsidiaries (L1)                         │
+│   Query 2: Parents / investors / people (L1)                │
+│   Query 3: Subsidiaries-of-subsidiaries (L2)                │
+│   Query 4: Grandparent owners (L2)                          │
+│                                                             │
+│   → Merge + deduplicate by Wikidata entity ID               │
+│   → Return { nodes: [...], edges: [...] }                   │
+└───────────────────────┬─────────────────────────────────────┘
+                        │ HTTPS SPARQL
+                        ▼
+         https://query.wikidata.org/sparql
+              (Wikidata SPARQL API — CC0)
 ```
 
 ---
 
 ## Data Flow
 
-```
-User types query
-      │
-      ▼
-wbsearchentities API (Wikidata)
-      │
-      ▼
-Client-side filter (company keywords) + deduplication
-      │
-      ▼
-User selects company
-      │
-      ▼
-Two parallel SPARQL queries (Promise.all)
-  ├── Query 1: Subsidiaries + Parent (LIMIT 40)
-  └── Query 2: People + Investors (LIMIT 30)
-      │
-      ▼
-Merge & deduplicate bindings
-      │
-      ▼
-Build nodes_map + edges array
-      │
-      ▼
-setGraphData → GraphStage + Sidebar re-render
-      │
-      ▼
-Node click → on-demand wbgetentities fetch (description)
-      │
-      ▼
-pieTotal derived from jurisdiction counts (Sidebar)
-      │
-      ▼
-Export → JSON download via Blob URL
-```
+1. User types company name → autocomplete calls Wikidata search endpoint
+2. User selects entity → `page.tsx` POSTs entity ID to `localhost:8000/graph`
+3. Backend fires 4 parallel SPARQL queries via `asyncio.gather`
+4. Results merged, deduplicated by entity QID
+5. Layer depth assigned: L1 (direct), L2 (2-hop)
+6. JSON `{ nodes, edges }` returned to frontend
+7. D3 force simulation renders graph
+8. Sidebar reads same graph data for metrics, pie chart, country breakdown
+9. Export: `JSON.stringify({ nodes, edges })` → file download
 
 ---
 
-## SPARQL Query Strategy
+## Component Responsibilities
 
-Two separate queries run in parallel to prevent subsidiaries from crowding out people and investors under a single LIMIT:
-
-| Query | Properties Fetched | Limit |
-|---|---|---|
-| Query 1 | Root, Subsidiaries (P355), Parent (P749) | 40 |
-| Query 2 | CEO (P169), Chair (P488), Board (P3320), Owner (P127) | 30 |
-
----
-
-## Graph Rendering (D3.js)
-
-- **Force Simulation:** forceLink + forceManyBody + forceCenter + forceCollide
-- **Node Sizing:** root = radius 24, others = radius 15
-- **Glow Effect:** outer circle at 0.1 opacity, radius 40/28
-- **Zoom:** scaleExtent [0.3, 3] via d3.zoom
-- **Drag:** d3.drag with alphaTarget for smooth physics
-- **Tooltip:** React state positioned at click coordinates; shows type badge, name, country, Wikidata ID, and live description
-- **Filters:** node type and jurisdiction filters hide/show nodes by mutating D3 selections in real time
-
----
-
-## Node Type System
-
-| Type | Color | Wikidata Properties |
-|---|---|---|
-| root | `#f59e0b` (amber) | BIND of searched entity |
-| subsidiary | `#3b82f6` (blue) | P355, P749 (reverse) |
-| investor | `#a855f7` (purple) | P749, P127 |
-| person | `#ec4899` (pink) | P169, P488, P3320 |
-
----
-
-## Sidebar Intelligence Modules
-
-| Module | Description |
+| Component | Responsibility |
 |---|---|
-| Metrics | Total Nodes, Subsidiaries, Investors, Key People |
-| Jurisdiction Concentration % | Derived metric: top-country node % + pie chart |
-| Subsidiaries List | Scrollable list with country tags |
-| Why This Matters | Contextual intelligence text |
-| Who Controls the Rail | Top controller breakdown |
+| `page.tsx` | Search state, graph data state, layout, attribution bar |
+| `GraphStage.tsx` | D3 force graph, node/edge rendering, L2 visual treatment, tooltips |
+| `Sidebar.tsx` | Metrics (total nodes, edges, L2 count), pie chart modal, node search, filter toggles, export button |
+| `main.py` | SPARQL query orchestration, deduplication, CORS, `/graph` endpoint |
 
 ---
 
 ## Key Design Decisions
 
-- **Two-query split** — prevents people/investors being crowded out by subsidiaries
-- **Client-side company filtering** — uses wbsearchentities (CORS-safe) + keyword filter instead of SPARQL (CORS issues in browser)
-- **Name deduplication** — search dropdown deduplicates by label to prevent repeated entries
-- **Raw ID filtering** — nodes with labels matching `/^Q\d+$/` are excluded from the graph
-- **Deduplication** — nodes_map keyed by Wikidata entity ID prevents duplicate nodes
-- **On-demand description fetch** — wbgetentities called per node click, not at graph load, to avoid rate limits
-- **pieTotal derived metric** — computed from jurisdiction count map; top-country % displayed inline with full pie chart on demand
-- **Export as JSON** — Blob URL download of full graphData object named after the root company
-- **Attribution bar** — SEC EDGAR, OpenCorporates, and Wikidata credited in a persistent footer strip
-- **Sidebar toggle** — collapses sidebar for smaller viewports without breaking graph layout
+### 1. Single Data Path
+Only Wikidata SPARQL is used. No dual-path confusion between SEC EDGAR / OpenCorporates. This ensures the app runs without API keys or paid access.
+
+### 2. 2-Hop Graph Depth
+Four SPARQL queries run in parallel rather than recursively, keeping latency low. Layer 2 nodes are tagged with `depth: 2` in the response, enabling visual distinction without a second render pass.
+
+### 3. Deduplication by Entity ID
+Wikidata QIDs (e.g. `Q12345`) are used as node IDs. Duplicate nodes from overlapping queries are dropped before the graph is returned, preventing duplicate edges.
+
+### 4. DNA Enforcement
+- Background: `#030712` hardcoded in all three components (page, graph, sidebar) and all modal/dropdown overlays
+- Accent: violet `#a855f7` for all highlights, badges, and active states
+- No cyan colors anywhere in the codebase
+
+### 5. Visual Layer Distinction
+- L2 nodes: smaller radius, lower opacity, dashed stroke edges, "L2" text badge
+- L1 nodes: full size, full opacity, solid edges
+- Tooltip shows "· Layer 2" suffix for depth-2 nodes
+
+### 6. Sidebar Intelligence Modules
+
+| Module | Data Source |
+|---|---|
+| Total Nodes / Edges | Derived from graph JSON |
+| Layer 2 Node Count | Filtered from `nodes.filter(n => n.depth === 2)` |
+| Ownership % Pie | Estimated from edge count per parent node |
+| Country Breakdown | `node.country` field from SPARQL results |
+| Node Search | Client-side filter on loaded graph (no refetch) |
+
+---
+
+## Backend: `requirements.txt`
+
+```
+fastapi==0.111.0
+uvicorn==0.30.1
+httpx==0.27.0
+```
+
+---
+
+## Startup
+
+```bash
+# Terminal 1
+cd backend && pip install -r requirements.txt && uvicorn main:app --reload
+
+# Terminal 2
+cd frontend && npm install && npm run dev
+```

@@ -52,126 +52,157 @@ export default function Home() {
     setLoading(true);
     setFilters({ type: "", country: "" });
     try {
+      const headers = {
+        "Accept": "application/json",
+        "User-Agent": "CorporateOwnershipGraph/1.0"
+      };
+
+      // Layer 1: direct relationships
       const sparql1 = `
         SELECT ?node ?nodeLabel ?rel ?countryLabel WHERE {
           {
             BIND(wd:${company.id} AS ?node)
             BIND("root" AS ?rel)
           }
-          UNION
-          {
-            wd:${company.id} wdt:P355 ?node.
-            BIND("subsidiary" AS ?rel)
-          }
-          UNION
-          {
-            ?node wdt:P749 wd:${company.id}.
-            BIND("subsidiary" AS ?rel)
-          }
-          UNION
-          {
-            wd:${company.id} wdt:P749 ?node.
-            BIND("parent" AS ?rel)
-          }
+          UNION { wd:${company.id} wdt:P355 ?node. BIND("subsidiary" AS ?rel) }
+          UNION { ?node wdt:P749 wd:${company.id}. BIND("subsidiary" AS ?rel) }
+          UNION { wd:${company.id} wdt:P749 ?node. BIND("parent" AS ?rel) }
           OPTIONAL {
             ?node wdt:P17 ?country.
             ?country rdfs:label ?countryLabel.
             FILTER(LANG(?countryLabel) = "en")
           }
-          SERVICE wikibase:label {
-            bd:serviceParam wikibase:language "en".
-            ?node rdfs:label ?nodeLabel.
-          }
+          SERVICE wikibase:label { bd:serviceParam wikibase:language "en". ?node rdfs:label ?nodeLabel. }
         } LIMIT 40
       `;
 
+      // Layer 1: people & investors
       const sparql2 = `
         SELECT ?node ?nodeLabel ?rel ?countryLabel WHERE {
-          {
-            wd:${company.id} wdt:P169 ?node.
-            BIND("person" AS ?rel)
-          }
-          UNION
-          {
-            wd:${company.id} wdt:P488 ?node.
-            BIND("person" AS ?rel)
-          }
-          UNION
-          {
-            wd:${company.id} wdt:P3320 ?node.
-            BIND("person" AS ?rel)
-          }
-          UNION
-          {
-            wd:${company.id} wdt:P127 ?node.
-            BIND("investor" AS ?rel)
-          }
+          { wd:${company.id} wdt:P169 ?node. BIND("person" AS ?rel) }
+          UNION { wd:${company.id} wdt:P488 ?node. BIND("person" AS ?rel) }
+          UNION { wd:${company.id} wdt:P3320 ?node. BIND("person" AS ?rel) }
+          UNION { wd:${company.id} wdt:P127 ?node. BIND("investor" AS ?rel) }
           OPTIONAL {
             ?node wdt:P17 ?country.
             ?country rdfs:label ?countryLabel.
             FILTER(LANG(?countryLabel) = "en")
           }
-          SERVICE wikibase:label {
-            bd:serviceParam wikibase:language "en".
-            ?node rdfs:label ?nodeLabel.
-          }
+          SERVICE wikibase:label { bd:serviceParam wikibase:language "en". ?node rdfs:label ?nodeLabel. }
         } LIMIT 30
       `;
 
-      const headers = {
-        "Accept": "application/json",
-        "User-Agent": "CorporateOwnershipGraph/1.0"
-      };
+      // Layer 2: subsidiaries-of-subsidiaries (depth 2)
+      const sparql3 = `
+        SELECT ?parent ?node ?nodeLabel ?countryLabel WHERE {
+          wd:${company.id} wdt:P355 ?parent.
+          ?parent wdt:P355 ?node.
+          OPTIONAL {
+            ?node wdt:P17 ?country.
+            ?country rdfs:label ?countryLabel.
+            FILTER(LANG(?countryLabel) = "en")
+          }
+          SERVICE wikibase:label { bd:serviceParam wikibase:language "en". ?node rdfs:label ?nodeLabel. }
+        } LIMIT 30
+      `;
 
-      const [res1, res2] = await Promise.all([
+      // Layer 2: grandparent owners
+      const sparql4 = `
+        SELECT ?child ?node ?nodeLabel ?countryLabel WHERE {
+          wd:${company.id} wdt:P749 ?child.
+          ?child wdt:P749 ?node.
+          OPTIONAL {
+            ?node wdt:P17 ?country.
+            ?country rdfs:label ?countryLabel.
+            FILTER(LANG(?countryLabel) = "en")
+          }
+          SERVICE wikibase:label { bd:serviceParam wikibase:language "en". ?node rdfs:label ?nodeLabel. }
+        } LIMIT 20
+      `;
+
+      const [res1, res2, res3, res4] = await Promise.all([
         fetch(`https://query.wikidata.org/sparql?query=${encodeURIComponent(sparql1)}&format=json`, { headers }),
         fetch(`https://query.wikidata.org/sparql?query=${encodeURIComponent(sparql2)}&format=json`, { headers }),
+        fetch(`https://query.wikidata.org/sparql?query=${encodeURIComponent(sparql3)}&format=json`, { headers }),
+        fetch(`https://query.wikidata.org/sparql?query=${encodeURIComponent(sparql4)}&format=json`, { headers }),
       ]);
 
-      const [data1, data2] = await Promise.all([res1.json(), res2.json()]);
-      const bindings = [
-        ...(data1.results?.bindings || []),
-        ...(data2.results?.bindings || []),
-      ];
+      const [data1, data2, data3, data4] = await Promise.all([
+        res1.json(), res2.json(), res3.json(), res4.json()
+      ]);
 
       const nodes_map: Record<string, any> = {};
       const edges: any[] = [];
       let root_label = company.name;
-
       const isRawId = (label: string) => /^Q\d+$/.test(label);
+
+      // Process layer 1
+      const bindings = [
+        ...(data1.results?.bindings || []),
+        ...(data2.results?.bindings || []),
+      ];
 
       for (const b of bindings) {
         const node_id = b.node.value.split("/").pop();
         const node_label = b.nodeLabel?.value || node_id;
         const rel = b.rel?.value || "subsidiary";
         const country = b.countryLabel?.value || "";
-
         if (isRawId(node_label)) continue;
 
         if (rel === "root") {
           root_label = node_label;
-          nodes_map[node_id] = { id: node_id, label: node_label, type: "root", country };
+          nodes_map[node_id] = { id: node_id, label: node_label, type: "root", country, depth: 0 };
         } else if (rel === "person") {
           if (!nodes_map[node_id]) {
-            nodes_map[node_id] = { id: node_id, label: node_label, type: "person", country };
+            nodes_map[node_id] = { id: node_id, label: node_label, type: "person", country, depth: 1 };
             edges.push({ source: node_id, target: company.id });
           }
         } else if (rel === "parent") {
-          nodes_map[node_id] = { id: node_id, label: node_label, type: "investor", country };
+          nodes_map[node_id] = { id: node_id, label: node_label, type: "investor", country, depth: 1 };
           edges.push({ source: node_id, target: company.id });
         } else if (rel === "investor") {
-          nodes_map[node_id] = { id: node_id, label: node_label, type: "investor", country };
+          nodes_map[node_id] = { id: node_id, label: node_label, type: "investor", country, depth: 1 };
           edges.push({ source: node_id, target: company.id });
         } else {
           if (!nodes_map[node_id]) {
-            nodes_map[node_id] = { id: node_id, label: node_label, type: "subsidiary", country };
+            nodes_map[node_id] = { id: node_id, label: node_label, type: "subsidiary", country, depth: 1 };
             edges.push({ source: company.id, target: node_id });
           }
         }
       }
 
+      // Process layer 2: sub-subsidiaries
+      for (const b of (data3.results?.bindings || [])) {
+        const parent_id = b.parent.value.split("/").pop();
+        const node_id = b.node.value.split("/").pop();
+        const node_label = b.nodeLabel?.value || node_id;
+        const country = b.countryLabel?.value || "";
+        if (isRawId(node_label) || node_id === company.id) continue;
+        if (!nodes_map[node_id]) {
+          nodes_map[node_id] = { id: node_id, label: node_label, type: "subsidiary", country, depth: 2 };
+          if (nodes_map[parent_id]) {
+            edges.push({ source: parent_id, target: node_id });
+          }
+        }
+      }
+
+      // Process layer 2: grandparent owners
+      for (const b of (data4.results?.bindings || [])) {
+        const child_id = b.child.value.split("/").pop();
+        const node_id = b.node.value.split("/").pop();
+        const node_label = b.nodeLabel?.value || node_id;
+        const country = b.countryLabel?.value || "";
+        if (isRawId(node_label) || node_id === company.id) continue;
+        if (!nodes_map[node_id]) {
+          nodes_map[node_id] = { id: node_id, label: node_label, type: "investor", country, depth: 2 };
+          if (nodes_map[child_id]) {
+            edges.push({ source: node_id, target: child_id });
+          }
+        }
+      }
+
       if (!nodes_map[company.id]) {
-        nodes_map[company.id] = { id: company.id, label: root_label, type: "root", country: "" };
+        nodes_map[company.id] = { id: company.id, label: root_label, type: "root", country: "", depth: 0 };
       }
 
       setGraphData({ company: root_label, nodes: Object.values(nodes_map), edges });
@@ -221,10 +252,10 @@ export default function Home() {
   ];
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-[#0a0a0f] font-mono">
+    <div className="relative w-screen h-screen overflow-hidden font-mono" style={{ background: "#030712" }}>
 
       {/* ── Header ── */}
-      <header className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-6 py-3 bg-black/50 backdrop-blur-md border-b border-violet-500/20">
+      <header className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-6 py-3 backdrop-blur-md border-b border-violet-500/20" style={{ background: "rgba(3,7,18,0.8)" }}>
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
           <span className="text-violet-300 text-sm tracking-widest uppercase">Corporate Ownership Graph</span>
@@ -248,7 +279,7 @@ export default function Home() {
       </header>
 
       {/* ── Search Bar ── */}
-      <div className="absolute top-12 left-0 right-0 z-20 px-6 py-3 bg-black/20 backdrop-blur-sm border-b border-white/5">
+      <div className="absolute top-12 left-0 right-0 z-20 px-6 py-3 border-b border-white/5" style={{ background: "rgba(3,7,18,0.6)" }}>
         <div className="flex items-center gap-3 max-w-lg">
           <input
             type="text"
@@ -256,7 +287,8 @@ export default function Home() {
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => e.key === "Enter" && handleSearch()}
             placeholder="Search company... (try Apple, Microsoft, Google)"
-            className="flex-1 bg-white/5 border border-violet-500/20 rounded-lg px-4 py-2 text-white text-xs placeholder-white/20 focus:outline-none focus:border-violet-500/50"
+            className="flex-1 border border-violet-500/20 rounded-lg px-4 py-2 text-white text-xs placeholder-white/20 focus:outline-none focus:border-violet-500/50"
+            style={{ background: "rgba(255,255,255,0.05)" }}
           />
           <button
             onClick={handleSearch}
@@ -267,7 +299,7 @@ export default function Home() {
         </div>
 
         {results.length > 0 && (
-          <div className="absolute mt-1 bg-[#0d0d18] border border-violet-500/20 rounded-lg overflow-hidden w-80 shadow-xl z-50">
+          <div className="absolute mt-1 border border-violet-500/20 rounded-lg overflow-hidden w-80 shadow-xl z-50" style={{ background: "#0d0d18" }}>
             {results.map((r, i) => (
               <button
                 key={i}
@@ -290,7 +322,7 @@ export default function Home() {
       <div
         className="absolute bottom-14 left-6 z-40 p-3 rounded-xl"
         style={{
-          background: "rgba(10,8,20,0.85)",
+          background: "rgba(3,7,18,0.9)",
           border: "1px solid rgba(139,92,246,0.25)",
           backdropFilter: "blur(12px)",
           boxShadow: "0 0 24px rgba(139,92,246,0.08)",
@@ -310,34 +342,16 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── Attribution Bar (bottom) ── */}
-      <div className="absolute bottom-0 left-0 right-0 z-40 flex items-center justify-center gap-6 px-6 py-1.5 bg-black/40 backdrop-blur-sm border-t border-white/5">
-        <span className="text-white/20 text-[9px] tracking-widest uppercase">Data Sources</span>
-        <a
-          href="https://www.sec.gov/cgi-bin/browse-edgar"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-violet-400/40 text-[9px] tracking-widest uppercase hover:text-violet-300 transition"
-        >
-          SEC EDGAR
-        </a>
-        <span className="text-white/10 text-[9px]">·</span>
-        <a
-          href="https://opencorporates.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-violet-400/40 text-[9px] tracking-widest uppercase hover:text-violet-300 transition"
-        >
-          OpenCorporates
-        </a>
-        <span className="text-white/10 text-[9px]">·</span>
+      {/* ── Attribution Bar (bottom) — Wikidata only ── */}
+      <div className="absolute bottom-0 left-0 right-0 z-40 flex items-center justify-center gap-6 px-6 py-1.5 backdrop-blur-sm border-t border-white/5" style={{ background: "rgba(3,7,18,0.7)" }}>
+        <span className="text-white/20 text-[9px] tracking-widest uppercase">Data Source</span>
         <a
           href="https://www.wikidata.org"
           target="_blank"
           rel="noopener noreferrer"
           className="text-violet-400/40 text-[9px] tracking-widest uppercase hover:text-violet-300 transition"
         >
-          Wikidata
+          Wikidata SPARQL API
         </a>
       </div>
 
@@ -374,7 +388,7 @@ export default function Home() {
           <div
             className="w-96 font-mono"
             style={{
-              background: "rgba(10,8,20,0.98)",
+              background: "rgba(3,7,18,0.98)",
               border: "1px solid rgba(139,92,246,0.2)",
               borderRadius: "16px",
               boxShadow: "0 0 40px rgba(139,92,246,0.12), 0 25px 60px rgba(0,0,0,0.8)",
@@ -392,7 +406,6 @@ export default function Home() {
               {[
                 { label: "Architect", value: "Nandhana T S" },
                 { label: "Stack", value: "Next.js · FastAPI · D3.js · Tailwind" },
-                
                 { label: "Dataset", value: "Wikidata SPARQL API" },
               ].map(({ label, value }) => (
                 <div key={label} className="flex items-start justify-between gap-4">
