@@ -8,16 +8,16 @@ An interactive graph explorer for corporate ownership structures, powered by liv
 
 | Feature | Description |
 |---|---|
-| 🔍 **Live Search** | Autocomplete company search via Wikidata |
-| 🕸️ **2-Hop Graph** | Layer 1 (direct) + Layer 2 (sub-subsidiaries, grandparent owners) |
-| 🎨 **DNA Design** | Background `#030712`, violet accent `#a855f7` |
-| 🏷️ **L2 Badges** | Depth-2 nodes visually distinct (dashed edges, smaller, L2 label) |
-| 📊 **Sidebar Panels** | Ownership %, pie chart, country breakdown, entity metrics |
-| 🔎 **Node Search** | Filter nodes inside the graph |
-| 🎛️ **Filters** | Toggle subsidiaries / parents / people / investors |
-| 💾 **Export** | Download full graph as JSON |
-| 🔗 **Tooltips** | Hover nodes for label, type, country, depth |
-| 📡 **Attribution** | Honest sourcing — Wikidata SPARQL API only |
+|  **Live Search** | Autocomplete company search via Wikidata |
+|  **2-Hop Graph** | Layer 1 (direct) + Layer 2 (sub-subsidiaries, grandparent owners) |
+|  **DNA Design** | Background `#030712`, violet accent `#a855f7` |
+|  **L2 Badges** | Depth-2 nodes visually distinct (dashed edges, smaller, L2 label) |
+|  **Sidebar Panels** | Ownership %, pie chart, country breakdown, entity metrics |
+|  **Node Search** | Filter nodes inside the graph |
+|  **Filters** | Toggle subsidiaries / parents / people / investors |
+|  **Export** | Download full graph as JSON |
+|  **Tooltips** | Hover nodes for label, type, country, depth |
+|  **Attribution** | Honest sourcing — Wikidata SPARQL API only |
 
 ---
 
